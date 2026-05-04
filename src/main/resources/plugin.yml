@@ -1,0 +1,17 @@
+name: CactusUpgrade
+version: 1.0.0
+main: com.cactusupgrade.CactusUpgrade
+api-version: 1.21
+depend: [SuperiorSkyblock2]
+description: Cactus growth speed upgrade for SuperiorSkyblock2
+
+commands:
+  cactusupgrade:
+    description: Manage cactus upgrade for islands
+    usage: /cactusupgrade <set|reset|info> <island-owner> [level]
+    permission: cactusupgrade.admin
+
+permissions:
+  cactusupgrade.admin:
+    description: Allows managing cactus upgrades
+    default: op
