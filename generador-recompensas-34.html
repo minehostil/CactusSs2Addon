@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Generador de Recompensas</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5DFA30;
+    --accent2: #00e5ff;
+    --bg: #1c1c28;
+    --surface: #24243a;
+    --surface2: #2d2d48;
+    --border: rgba(255,255,255,0.10);
+    --text: #e2e8f0;
+    --muted: #7a8aa0;
+    --red: #ef4444;
+    --orange: #f97316;
+    --purple: #a855f7;
+    --blue: #3b82f6;
+    --green: #22c55e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 64px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0;
+    gap: 8px;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; color: #000;
+    margin-bottom: 8px;
+    box-shadow: 0 0 20px rgba(93,250,48,0.3);
+  }
+
+  .nav-btn {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: all 0.18s;
+    position: relative;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: rgba(93,250,48,0.12); color: var(--accent); border-color: rgba(93,250,48,0.3); }
+  .nav-btn .tooltip {
+    position: absolute; left: 58px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 6px;
+    white-space: nowrap; pointer-events: none;
+    opacity: 0; transform: translateX(-4px);
+    transition: all 0.15s;
+    z-index: 100;
+  }
+  .nav-btn:hover .tooltip { opacity: 1; transform: translateX(0); }
+
+  .sidebar-sep {
+    width: 32px; height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  .sidebar-bottom { margin-top: auto; }
+
+  /* ── PANEL AREA ── */
+  .panel-area {
+    flex: 1;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .panel-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-size: 16px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text);
+  }
+  .panel-badge {
+    font-size: 10px; font-weight: 700;
+    background: rgba(93,250,48,0.15);
+    color: var(--accent);
+    padding: 2px 8px; border-radius: 20px;
+    border: 1px solid rgba(93,250,48,0.25);
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel-content::-webkit-scrollbar { width: 4px; }
+  .panel-content::-webkit-scrollbar-track { background: transparent; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── SECTION CARDS ── */
+  .sec-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .sec-card:hover { border-color: rgba(255,255,255,0.12); }
+
+  .sec-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sec-head-left { display: flex; align-items: center; gap: 10px; }
+  .sec-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .sec-label { font-size: 14px; font-weight: 700; }
+  .sec-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .sec-chevron {
+    font-size: 10px; color: var(--muted);
+    transition: transform 0.2s;
+  }
+  .sec-card.open .sec-chevron { transform: rotate(180deg); }
+
+  .sec-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
+    border-top: 0px solid var(--border);
+  }
+  .sec-card.open .sec-body {
+    max-height: 2000px;
+    border-top: 1px solid var(--border);
+  }
+  .sec-body-inner { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── FIELDS ── */
+  .field-group { display: flex; flex-direction: column; gap: 3px; }
+  .field-group label {
+    font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 2px;
+  }
+  .field-row { display: grid; gap: 8px; }
+  .fr-2 { grid-template-columns: 1fr 1fr; }
+  .fr-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  input[type=text], input[type=number], select, textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(93,250,48,0.4);
+    box-shadow: 0 0 0 3px rgba(93,250,48,0.07);
+  }
+  textarea { height: 80px; resize: vertical; }
+  select option { background: var(--surface2); }
+
+  /* ── TOGGLE SWITCH ── */
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+  .toggle {
+    width: 36px; height: 20px; position: relative;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .toggle input { display: none; }
+  .toggle-track {
+    width: 100%; height: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    transition: all 0.2s;
+  }
+  .toggle input:checked ~ .toggle-track {
+    background: rgba(93,250,48,0.2);
+    border-color: rgba(93,250,48,0.5);
+  }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+  .toggle input:checked ~ .toggle-thumb {
+    background: var(--accent);
+    transform: translateX(16px);
+  }
+
+  /* ── REQ ROW ── */
+  .req-row {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .req-row-top { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .req-row-bot { display: grid; grid-template-columns: 1fr 1fr 0.6fr 0.6fr; gap: 12px; }
+
+  /* ── REWARD ROW ── */
+  .reward-row {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s, opacity 0.2s;
+  }
+  .reward-row.disabled { opacity: 0.45; }
+  .reward-row.enabled { border-color: rgba(93,250,48,0.25); }
+  .rew-head { display: flex; align-items: center; justify-content: space-between; }
+  .rew-num {
+    font-size: 10px; font-weight: 800;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+  }
+  .rew-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rew-foot { display: grid; grid-template-columns: 0.7fr 0.7fr 0.5fr; gap: 12px; }
+
+  /* ── INV GRID ── */
+  .inv-wrap {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 26px);
+    gap: 2px;
+  }
+  .inv-slot {
+    width: 26px; height: 26px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .inv-slot.active {
+    background: rgba(93,250,48,0.2);
+    border-color: rgba(93,250,48,0.6);
+    color: var(--accent);
+    font-weight: 800;
+    box-shadow: 0 0 6px rgba(93,250,48,0.2);
+  }
+
+  /* ── STATUS PILLS ── */
+  .states-grid { display: flex; flex-direction: column; gap: 10px; }
+  .state-pill {
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .state-pill .pill-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+  }
+  .state-pill .pill-row2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .state-pill-label {
+    font-size: 9px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .sp-locked { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
+  .sp-locked .state-pill-label { color: var(--red); }
+  .sp-claim  { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); }
+  .sp-claim .state-pill-label  { color: var(--orange); }
+  .sp-done   { border-color: rgba(34,197,94,0.3);  background: rgba(34,197,94,0.06); }
+  .sp-done .state-pill-label   { color: var(--green); }
+
+  /* ── CODE VIEW ── */
+  .main-top {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    min-height: 0;
+    transition: flex 0.45s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Footer */
+  .site-footer {
+    flex-shrink: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+    z-index: 21;
+  }
+  .site-footer span { color: var(--accent); font-weight: 700; }
+
+  .code-view {
+    flex-shrink: 0;
+    background: #14161f;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+  }
+
+  .code-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.02);
+  }
+  .code-tabs { display: flex; gap: 4px; }
+  .code-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  .copy-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    box-shadow: 0 2px 0 #3eb020, 0 0 20px rgba(93,250,48,0.2);
+  }
+  .copy-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 0 #3eb020, 0 0 30px rgba(93,250,48,0.3); }
+  .copy-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 #3eb020; }
+  .copy-btn.copied { background: var(--accent2); box-shadow: 0 2px 0 #009ab8, 0 0 20px rgba(0,229,255,0.2); }
+
+  .code-body {
+    flex: 1;
+    overflow: auto;
+    padding: 20px 24px;
+  }
+  .code-body::-webkit-scrollbar { width: 5px; height: 5px; }
+  .code-body::-webkit-scrollbar-track { background: transparent; }
+  .code-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  pre#output {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #79c0ff;
+    white-space: pre;
+  }
+
+  /* line coloring */
+  pre#output { }
+
+  .code-filename {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .code-filename span { color: var(--accent); }
+
+  /* ── RESET BTN ── */
+  .reset-btn {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: var(--red);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: all 0.18s;
+  }
+  .reset-btn:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
+
+  /* ── SECTION VIEWS ── */
+  .view { display: none; flex-direction: column; height: 100%; }
+  .view.active { display: flex; }
+
+  /* ── COLOR TAG ── */
+  .color-tag {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+    border: 1px solid rgba(255,255,255,0.2);
+    flex-shrink: 0;
+  }
+
+  /* ── SECTION DIVIDER ── */
+  .sdiv {
+    font-size: 9px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+
+  /* Scrollbar hidden sections */
+  .hidden-section { display: none; }
+
+  /* Animation */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  /* animations removed to prevent lag on dynamic content */
+
+  /* Code line highlight */
+  .yaml-key { color: #79c0ff; }
+  .yaml-val { color: #a5d6ff; }
+  .yaml-str { color: #a8d8a8; }
+
+  /* Mini stats bar */
+  .stats-bar {
+    display: flex; gap: 12px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.15);
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 1px; }
+  .stat-label { font-size: 9px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-val { font-size: 13px; font-weight: 800; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+
+  /* Info row */
+  .info-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(93,250,48,0.08);
+    border: 1px solid rgba(93,250,48,0.2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10px; font-weight: 600; color: var(--accent);
+  }
+  /* PREVIEW PANEL */
+  .preview-panel { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); }
+  .preview-bar { display: flex; align-items: center; justify-content: space-between; padding: 9px 18px; cursor: pointer; user-select: none; background: rgba(255,255,255,0.02); border-bottom: 1px solid transparent; transition: background 0.15s, border-color 0.2s; }
+  .preview-bar:hover { background: rgba(255,255,255,0.04); }
+  .preview-panel.open .preview-bar { border-bottom-color: var(--border); }
+  .preview-bar-left { display: flex; align-items: center; gap: 10px; }
+  .preview-bar-right { display: flex; align-items: center; gap: 14px; }
+  .preview-pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px rgba(93,250,48,0.6); animation: pulse-glow 2s ease infinite; flex-shrink: 0; }
+  @keyframes pulse-glow { 0%,100% { opacity:1; box-shadow: 0 0 6px rgba(93,250,48,0.6); } 50% { opacity:0.6; box-shadow: 0 0 12px rgba(93,250,48,0.2); } }
+  .preview-bar-title { font-size: 11px; font-weight: 700; color: var(--text); }
+  .preview-badge { font-size: 9px; font-weight: 700; background: rgba(93,250,48,0.1); color: var(--accent); border: 1px solid rgba(93,250,48,0.2); padding: 2px 7px; border-radius: 20px; }
+  .preview-stats { display: flex; gap: 14px; font-size: 10px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+  .preview-stats b { color: var(--text); font-weight: 700; }
+  .preview-toggle-btn { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 4px 10px; font-size: 10px; font-weight: 700; cursor: pointer; font-family: "Syne", sans-serif; transition: all 0.15s; pointer-events: none; }
+  .preview-bar:hover .preview-toggle-btn { border-color: rgba(93,250,48,0.3); color: var(--accent); background: rgba(93,250,48,0.08); }
+  #previewChevron { font-size: 8px; display: inline-block; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .preview-panel.open #previewChevron { transform: rotate(0deg); }
+  .preview-panel:not(.open) #previewChevron { transform: rotate(180deg); }
+  .preview-body { overflow: hidden; max-height: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0 18px; transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1), padding 0.45s; }
+  .preview-panel.open .preview-body { max-height: 65vh; padding: 0; }
+  .inv-legend { display: flex; gap: 16px; font-size: 10px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+  .active-dot { background: rgba(93,250,48,0.2); border-color: rgba(93,250,48,0.6); box-shadow: 0 0 5px rgba(93,250,48,0.2); }
+
+  /* YAML preview body scroll */
+
+  .preview-body pre#output {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #79c0ff;
+    white-space: pre;
+    padding: 16px 24px;
+    overflow: auto;
+    max-height: 65vh;
+    width: 100%;
+  }
+  .preview-body pre#output::-webkit-scrollbar { width: 5px; height: 5px; }
+  .preview-body pre#output::-webkit-scrollbar-track { background: transparent; }
+  .preview-body pre#output::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+
+  /* ── ADD BUTTON ── */
+  .add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%;
+    background: rgba(93,250,48,0.06);
+    border: 1px dashed rgba(93,250,48,0.3);
+    border-radius: 10px;
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 700;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.3px;
+  }
+  .add-btn:hover {
+    background: rgba(93,250,48,0.12);
+    border-color: rgba(93,250,48,0.6);
+    box-shadow: 0 0 12px rgba(93,250,48,0.1);
+  }
+  .add-btn:active { transform: scale(0.98); }
+  .add-btn .add-icon {
+    width: 18px; height: 18px;
+    background: rgba(93,250,48,0.2);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; line-height: 1;
+  }
+  /* Remove button on req/reward rows */
+  .row-remove-btn {
+    width: 22px; height: 22px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 6px;
+    color: var(--red);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .row-remove-btn:hover { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.5); }
+
+
+  /* ── CHECKBOX GROUP ── */
+  .checkbox-group {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 4px 0;
+  }
+  .check-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 11px; font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'JetBrains Mono', monospace;
+    user-select: none;
+  }
+  .check-chip:hover { border-color: rgba(93,250,48,0.3); color: var(--text); }
+  .check-chip input[type=checkbox] { display: none; }
+  .check-chip:has(input:checked) {
+    background: rgba(93,250,48,0.12);
+    border-color: rgba(93,250,48,0.5);
+    color: var(--accent);
+  }
+
+
+  /* ── PANELTYPE DROPDOWN ── */
+  .pt-wrap { display: flex; flex-direction: column; gap: 0; position: relative; }
+  .pt-input-row { display: flex; gap: 8px; align-items: stretch; }
+  .pt-input-row input {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 9px 12px;
+    outline: none;
+    cursor: default;
+    transition: border-color 0.15s;
+  }
+  .pt-input-row input:focus { border-color: rgba(93,250,48,0.4); }
+  .pt-toggle-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    padding: 0 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .pt-toggle-btn:hover { border-color: rgba(93,250,48,0.4); color: var(--accent); }
+  .pt-toggle-btn.open { border-color: rgba(93,250,48,0.5); color: var(--accent); background: rgba(93,250,48,0.08); }
+  #ptChevron { font-size: 12px; transition: transform 0.2s; display: inline-block; }
+  .pt-toggle-btn.open #ptChevron { transform: rotate(180deg); }
+
+  .pt-dropdown {
+    display: none;
+    flex-direction: column;
+    background: var(--surface2);
+    border: 1px solid rgba(93,250,48,0.25);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 50;
+  }
+  .pt-dropdown.open { display: flex; }
+  .pt-option {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.13s;
+    gap: 12px;
+  }
+  .pt-option:last-child { border-bottom: none; }
+  .pt-option:hover { background: rgba(93,250,48,0.07); }
+  .pt-option.selected { background: rgba(93,250,48,0.1); }
+  .pt-option.selected .pt-opt-name { color: var(--accent); }
+  .pt-opt-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .pt-opt-desc {
+    font-size: 10px; color: var(--muted);
+    text-align: right;
+  }
+
+
+  /* ── HELP BOX ── */
+  .help-box {
+    background: rgba(0,229,255,0.04);
+    border: 1px solid rgba(0,229,255,0.13);
+    border-left: 3px solid rgba(0,229,255,0.5);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .help-box-title {
+    font-size: 10px; font-weight: 700;
+    color: var(--accent2);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 5px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .help-box ul {
+    list-style: none;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .help-box ul li {
+    font-size: 11px;
+    color: #8899aa;
+    padding-left: 10px;
+    position: relative;
+    line-height: 1.45;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 400;
+  }
+  .help-box ul li::before {
+    content: '–';
+    position: absolute; left: 0;
+    color: rgba(0,229,255,0.5);
+  }
+  .help-box ul li b { color: #c8d8e8; font-weight: 600; }
+  .help-box ul li code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: rgba(255,255,255,0.07);
+    padding: 1px 5px; border-radius: 3px;
+    color: #a8d8a8;
+  }
+
+
+  /* ── CMD TOGGLE ROWS ── */
+  .cmd-row {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .cmd-row-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .cmd-row-head label.toggle { flex-shrink: 0; }
+  .cmd-preview {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+    color: #a8d8a8;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: opacity 0.2s, color 0.2s;
+    flex: 1;
+    min-width: 0;
+  }
+  .cmd-preview.off {
+    color: var(--muted);
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+  .cmd-fields {
+    display: grid; grid-template-columns: 1fr 0.4fr 0.4fr; gap: 6px;
+    transition: opacity 0.2s;
+  }
+  .cmd-fields.off { opacity: 0.35; pointer-events: none; }
+
+
+  /* ── STATE CMD ROWS ── */
+  .state-cmds-label {
+    font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-top: 4px;
+  }
+  .state-cmd-row {
+    display: flex; align-items: center; gap: 5px;
+  }
+  .state-cmd-prefix {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    color: var(--accent2);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 52px;
+  }
+  .state-cmd-row input[type=text] {
+    flex: 1; min-width: 0;
+  }
+  .state-cmd-short {
+    width: 48px !important;
+    flex: none !important;
+    padding: 9px 6px !important;
+    text-align: center;
+  }
+
+
+  .state-extra-cmds { display: flex; flex-direction: column; gap: 4px; }
+  .state-extra-row {
+    display: flex; align-items: center; gap: 5px;
+  }
+  .state-extra-row input { flex: 1; min-width: 0; }
+  .state-extra-remove {
+    width: 22px; height: 22px; flex-shrink: 0;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 5px; color: var(--red);
+    font-size: 11px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .state-extra-remove:hover { background: rgba(239,68,68,0.25); }
+  .state-add-cmd-btn {
+    display: flex; align-items: center; gap: 5px;
+    background: transparent;
+    border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 10px; font-weight: 700;
+    padding: 5px 10px; cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    justify-content: center;
+  }
+  .state-add-cmd-btn:hover {
+    border-color: rgba(93,250,48,0.35);
+    color: var(--accent);
+  }
+
+
+  /* ── ROWS SELECTOR ── */
+  .rows-selector {
+    display: flex; gap: 6px; margin-top: 4px;
+  }
+  .row-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .row-btn:hover { border-color: rgba(93,250,48,0.3); color: var(--text); }
+  .row-btn.active {
+    background: rgba(93,250,48,0.15);
+    border-color: rgba(93,250,48,0.6);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(93,250,48,0.2);
+  }
+  .rows-warning {
+    margin-top: 5px;
+    font-size: 10px;
+    color: var(--orange);
+    font-family: Arial, Helvetica, sans-serif;
+    background: rgba(249,115,22,0.08);
+    border: 1px solid rgba(249,115,22,0.25);
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+  /* ── EXTRA ITEMS ── */
+  .extra-item-card {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .extra-item-head {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .extra-item-num {
+    font-size: 10px; font-weight: 800;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+  }
+
+
+  .inv-slot.extra {
+    background: rgba(0,229,255,0.15);
+    border-color: rgba(0,229,255,0.5);
+    color: var(--accent2);
+    font-weight: 800;
+  }
+
+
+  .progress-wrap {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .progress-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+  }
+  .progress-head-left { display: flex; align-items: center; gap: 10px; }
+  .progress-fields {
+    border-top: 1px solid var(--border);
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .progress-preview-box {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #a8d8a8;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="main-top">
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">⚡</div>
+
+  <button class="nav-btn active" data-view="panel" onclick="switchView('panel', this)">
+    ⚙️
+    <span class="tooltip">Panel</span>
+  </button>
+  <button class="nav-btn" data-view="lore" onclick="switchView('lore', this)">
+    📝
+    <span class="tooltip">Lore & Botones</span>
+  </button>
+  <button class="nav-btn" data-view="reqs" onclick="switchView('reqs', this)">
+    📊
+    <span class="tooltip">Requisitos</span>
+  </button>
+  <button class="nav-btn" data-view="rewards" onclick="switchView('rewards', this)">
+    🎁
+    <span class="tooltip">Recompensas</span>
+  </button>
+
+  <div class="sidebar-sep"></div>
+
+  <button class="nav-btn" data-view="luckperms" onclick="switchView('luckperms', this)">
+    🔑
+    <span class="tooltip">LuckPerms</span>
+  </button>
+  <button class="nav-btn" data-view="layout" onclick="switchView('layout', this)">
+    🗺️
+    <span class="tooltip">Layout</span>
+  </button>
+
+  <div class="sidebar-bottom">
+    <button class="reset-btn" onclick="if(confirm('¿Resetear todo?')) location.reload()" title="Resetear">
+      ↺
+    </button>
+  </div>
+</div>
+
+<!-- PANEL AREA -->
+<div class="panel-area">
+
+  <!-- VIEW: PANEL -->
+  <div class="view active" id="view-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">⚙️ Ajustes del Panel</div>
+      </div>
+      <div class="panel-badge">PANEL</div>
+    </div>
+    <div class="panel-content">
+      <div class="help-box">
+        <div class="help-box-title">💡 Cómo usar Ajustes del Panel</div>
+        <ul>
+          <li><b>ID del Panel:</b> identificador único en el YAML, sin espacios.</li>
+          <li><b>Permiso Default:</b> permiso requerido para abrir el panel. Usa <code>default</code> para todos.</li>
+          <li><b>Comandos de Apertura:</b> separados por coma, ej. <code>rewards, r</code>.</li>
+          <li><b>commands-on-open:</b> comandos de consola que se ejecutan cada vez que se abre el panel, uno por línea.</li>
+          <li><b>panelType:</b> <code>static</code> no refresca, <code>nocommand</code> desactiva comandos de apertura, <code>unclosable</code> bloquea ESC.</li>
+          <li><b>Fondo:</b> material que rellena los slots vacíos del inventario.</li>
+        </ul>
+      </div>
+      <div class="field-row fr-2">
+        <div class="field-group">
+          <label>ID del Panel</label>
+          <input type="text" id="panelID" value="nombre_panel" oninput="debouncedGen()">
+        </div>
+        <div class="field-group">
+          <label>Permiso Default</label>
+          <input type="text" id="openPerm" value="default" oninput="debouncedGen()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Título del Menú</label>
+        <input type="text" id="panelTitle" value="&8Menu recompensas" oninput="debouncedGen()">
+      </div>
+      <div class="field-row fr-2">
+        <div class="field-group">
+          <label>Comandos de Apertura</label>
+          <input type="text" id="openCmds" value="recompensas, rewards" oninput="debouncedGen()">
+        </div>
+        <div class="field-group">
+          <label>Fondo (Material)</label>
+          <input type="text" id="emptyMat" value="BLACK_STAINED_GLASS_PANE" oninput="debouncedGen()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Comandos al Abrir (commands-on-open)</label>
+        <textarea id="openOnCmds" oninput="debouncedGen()" placeholder="Un comando por línea"></textarea>
+      </div>
+      <div class="field-group">
+        <label>Tipo de Panel (panelType)</label>
+        <div class="pt-wrap">
+          <div class="pt-input-row">
+            <input type="text" id="panelTypeInput" placeholder="Escribe o elige una opción..." oninput="debouncedGen()" readonly>
+            <button class="pt-toggle-btn" onclick="togglePtDropdown()" id="ptToggleBtn" type="button">
+              <span id="ptChevron">▾</span> Opciones
+            </button>
+          </div>
+          <div class="pt-dropdown" id="ptDropdown">
+            <div class="pt-option" onclick="selectPtOption('static')">
+              <span class="pt-opt-name">static</span>
+              <span class="pt-opt-desc">Panel estático, no se refresca</span>
+            </div>
+            <div class="pt-option" onclick="selectPtOption('nocommand')">
+              <span class="pt-opt-name">nocommand</span>
+              <span class="pt-opt-desc">Sin comandos de apertura</span>
+            </div>
+            <div class="pt-option" onclick="selectPtOption('nocommandregister')">
+              <span class="pt-opt-name">nocommandregister</span>
+              <span class="pt-opt-desc">No registra los comandos al servidor</span>
+            </div>
+            <div class="pt-option" onclick="selectPtOption('unmovable')">
+              <span class="pt-opt-name">unmovable</span>
+              <span class="pt-opt-desc">Items no se pueden mover</span>
+            </div>
+            <div class="pt-option" onclick="selectPtOption('unclosable')">
+              <span class="pt-opt-name">unclosable</span>
+              <span class="pt-opt-desc">El panel no se puede cerrar con ESC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-label">ID</div><div class="stat-val" id="stat-id">nombre_panel</div></div>
+      <div class="stat-item"><div class="stat-label">Perm</div><div class="stat-val" id="stat-perm">default</div></div>
+    </div>
+  </div>
+
+  <!-- VIEW: LORE -->
+  <div class="view" id="view-lore">
+    <div class="panel-header">
+      <div class="panel-title">📝 Lore & Botones</div>
+      <div class="panel-badge">LORE</div>
+    </div>
+    <div class="panel-content">
+      <div class="help-box">
+        <div class="help-box-title">💡 Cómo usar Lore & Botones</div>
+        <ul>
+          <li><b>Lore Superior:</b> texto visible en todos los slots. Soporta <code>&</code> y <code>#HEX</code> para colores.</li>
+          <li><b>Mostrar progreso:</b> en lugar de <code>%placeholder%/requisito</code>, muestra el valor requerido con el progreso actual del jugador al lado. Ej: <code>&fDinero: &a1000 &7(llevás %vault_eco_balance%)</code>. Puedes personalizar el color, el texto antes (<code>llevás </code>) y después (<code>)</code>) del placeholder.</li>
+          <li><b>Comandos de estado:</b> cada estado (Bloqueado, Reclamar, Completado) tiene su propio <code>msg=</code> y <code>sound=</code>.</li>
+          <li><b>Añadir comando:</b> agrega líneas extra al bloque <code>commands:</code> de cada estado, ej. <code>console= eco give ...</code>.</li>
+          <li><b>Estados:</b> Bloqueado muestra requisitos faltantes, Reclamar ejecuta las recompensas, Completado confirma el nivel ya reclamado.</li>
+        </ul>
+      </div>
+      <div class="field-group">
+        <label>Lore Superior</label>
+        <textarea id="loreMulti" oninput="debouncedGen()">&8ɪɴꜰᴏʀᴍᴀᴄɪᴏɴ
+ 
+&fDesbloquea esta recompensa
+&fcompletando las tareas.</textarea>
+      </div>
+      <div class="field-row fr-2">
+        <div class="field-group">
+          <label>Texto Recompensas</label>
+          <input type="text" id="titleRew" value="#AEFAB4Recompensas:" oninput="debouncedGen()">
+        </div>
+        <div class="field-group">
+          <label>Texto Requisitos</label>
+          <input type="text" id="titleReq" value="#5DFA30Requisitos:" oninput="debouncedGen()">
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-head">
+          <div class="progress-head-left">
+            <label class="toggle">
+              <input type="checkbox" id="showProgress" onchange="toggleProgressFields();gen()">
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+            <div>
+              <div style="font-size:12px; font-weight:700; color:var(--text);">Mostrar progreso en requisitos</div>
+              <div style="font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-top:2px;" id="progressPreview">&amp;7• &amp;fDinero: &amp;a1000 &amp;7(llevás %vault_eco_balance%)</div>
+            </div>
+          </div>
+        </div>
+        <div class="progress-fields" id="progressFields" style="display:none; flex-direction:column; gap:8px;">
+          <div class="field-row fr-2">
+            <div class="field-group">
+              <label>Color del texto extra</label>
+              <input type="text" id="progColor" value="&7" oninput="updateProgressPreview();debouncedGen()">
+            </div>
+            <div class="field-group">
+              <label>Texto antes del placeholder</label>
+              <input type="text" id="progPrefix" value="(llevás " oninput="updateProgressPreview();debouncedGen()">
+            </div>
+          </div>
+          <div class="field-row fr-2">
+            <div class="field-group">
+              <label>Texto después del placeholder</label>
+              <input type="text" id="progSuffix" value=")" oninput="updateProgressPreview();debouncedGen()">
+            </div>
+            <div class="field-group">
+              <label>Color del valor requerido</label>
+              <input type="text" id="progGoalColor" value="" placeholder="usar color del requisito" oninput="updateProgressPreview();debouncedGen()">
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Vista previa</label>
+            <div class="progress-preview-box" id="progressPreviewFull">&7• &fDinero: &a1000 &7(llevás %vault_eco_balance%)</div>
+          </div>
+        </div>
+      </div>
+      <div class="sdiv">Estados de botones</div>
+      <div class="states-grid">
+
+        <!-- BLOQUEADO -->
+        <div class="state-pill sp-locked">
+          <div class="state-pill-label">🔒 Bloqueado</div>
+          <div class="field-group"><label>Material</label><input type="text" id="matLocked" value="RED_STAINED_GLASS_PANE" oninput="debouncedGen()"></div>
+          <div class="field-group"><label>Texto Botón</label><input type="text" id="btnLocked" value="#AEFAB4➥ &cNo cumples los requisitos" oninput="debouncedGen()"></div>
+          <div class="state-cmds-label">Comandos de estado:</div>
+          <div class="state-cmd-row">
+            <span class="state-cmd-prefix">msg=</span>
+            <input type="text" id="msgLocked" value="&c¡No cumples con los requisitos!" placeholder="&c¡No cumples con los requisitos!" oninput="debouncedGen()">
+          </div>
+          <div class="state-cmd-row">
+            <span class="state-cmd-prefix">sound=</span>
+            <input type="text" id="sndLocked" value="ENTITY_VILLAGER_NO" placeholder="ENTITY_VILLAGER_NO" oninput="debouncedGen()">
+            <input type="number" id="sndLockedVol" value="10" class="state-cmd-short" oninput="debouncedGen()">
+            <input type="number" id="sndLockedPitch" value="1" class="state-cmd-short" oninput="debouncedGen()">
+          </div>
+          <div class="state-extra-cmds" id="extraCmdsLocked"></div>
+          <button class="state-add-cmd-btn" onclick="addExtraCmd('locked')">+ Añadir comando</button>
+        </div>
+
+        <!-- RECLAMAR -->
+        <div class="state-pill sp-claim">
+          <div class="state-pill-label">🟠 Reclamar</div>
+          <div class="field-group"><label>Material</label><input type="text" id="matClaim" value="ORANGE_STAINED_GLASS_PANE" oninput="debouncedGen()"></div>
+          <div class="field-group"><label>Texto Botón</label><input type="text" id="btnClaim" value="#AEFAB4➥ &eClic para reclamar!" oninput="debouncedGen()"></div>
+          <div class="state-cmds-label">Comandos de estado:</div>
+          <div class="state-cmd-row">
+            <span class="state-cmd-prefix">msg=</span>
+            <input type="text" id="msgClaim" value="&a¡Has reclamado el nivel {lv}!" placeholder="&a¡Has reclamado el nivel {lv}!" oninput="debouncedGen()">
+          </div>
+          <div class="state-cmd-row">
+            <span class="state-cmd-prefix">sound=</span>
+            <input type="text" id="sndClaim" value="ENTITY_PLAYER_LEVELUP" placeholder="ENTITY_PLAYER_LEVELUP" oninput="debouncedGen()">
+            <input type="number" id="sndClaimVol" value="10" class="state-cmd-short" oninput="debouncedGen()">
+            <input type="number" id="sndClaimPitch" value="1" class="state-cmd-short" oninput="debouncedGen()">
+          </div>
+          <div class="state-extra-cmds" id="extraCmdsClaim"></div>
+          <button class="state-add-cmd-btn" onclick="addExtraCmd('claim')">+ Añadir comando</button>
+        </div>
+
+        <!-- COMPLETADO -->
+        <div class="state-pill sp-done">
+          <div class="state-pill-label">✅ Completado</div>
+          <div class="field-group"><label>Material</label><input type="text" id="matDone" value="LIME_STAINED_GLASS_PANE" oninput="debouncedGen()"></div>
+          <div class="field-group"><label>Texto Botón</label><input type="text" id="btnDone" value="#AEFAB4➥ &aNivel completado" oninput="debouncedGen()"></div>
+          <div class="state-cmds-label">Comandos de estado:</div>
+          <div class="state-cmd-row">
+            <span class="state-cmd-prefix">msg=</span>
+            <input type="text" id="msgDone" value="&7Ya reclamaste este nivel" oninput="debouncedGen()">
+          </div>
+          <div class="state-cmd-row">
+            <span class="state-cmd-prefix">sound=</span>
+            <input type="text" id="sndDone" value="BLOCK_NOTE_BLOCK_PLING" oninput="debouncedGen()">
+            <input type="number" id="sndDoneVol" value="10" class="state-cmd-short" oninput="debouncedGen()">
+            <input type="number" id="sndDonePitch" value="1" class="state-cmd-short" oninput="debouncedGen()">
+          </div>
+          <div class="state-extra-cmds" id="extraCmdsDone"></div>
+          <button class="state-add-cmd-btn" onclick="addExtraCmd('done')">+ Añadir comando</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: REQUISITOS -->
+  <div class="view" id="view-reqs">
+    <div class="panel-header">
+      <div class="panel-title">📊 Requisitos</div>
+      <div class="panel-badge">REQS</div>
+    </div>
+    <div class="panel-content">
+      <div class="help-box">
+        <div class="help-box-title">💡 Cómo usar el Sistema de Requisitos</div>
+        <ul>
+          <li><b>Variable PlaceholderAPI:</b> placeholder evaluado en tiempo real, ej. <code>%vault_eco_balance%</code> para dinero.</li>
+          <li><b>Base + Aumento/Lv:</b> el valor requerido escala por nivel. Ej: Base <code>1000</code> + Aumento <code>500</code> → nivel 3 pide <code>2000</code>.</li>
+          <li><b>Niveles:</b> separa por coma para restringir el requisito a niveles específicos, ej. <code>1,3,5</code>. Vacío = todos los niveles.</li>
+          <li><b>Color:</b> código de color para el valor en el lore, ej. <code>&a</code> verde, <code>&c</code> rojo o <code>#HEX</code>.</li>
+          <li><b>Añadir Requisito:</b> puedes tener múltiples requisitos por nivel con diferentes variables y rangos de niveles.</li>
+        </ul>
+      </div>
+      <div id="reqsContainer"></div>
+      <button class="add-btn" onclick="addReq()">
+        <span class="add-icon">+</span> Añadir Requisito
+      </button>
+    </div>
+  </div>
+
+  <!-- VIEW: RECOMPENSAS -->
+  <div class="view" id="view-rewards">
+    <div class="panel-header">
+      <div class="panel-title">🎁 Recompensas</div>
+      <div class="panel-badge" id="rew-badge">2 ACTIVAS</div>
+    </div>
+    <div class="panel-content">
+      <div class="help-box">
+        <div class="help-box-title">💡 Cómo usar el Sistema de Recompensas</div>
+        <ul>
+          <li><b>Comando:</b> ejecutado en consola al reclamar. Usa <code>{val}</code> para la cantidad calculada y <code>{lv}</code> para el nivel.</li>
+          <li><b>Multiplicar x Lv:</b> <code>cantidad × nivel</code>, escala progresivamente. Ej: 100 × nivel 5 = <code>500</code>.</li>
+          <li><b>Fijo:</b> entrega siempre la misma cantidad sin importar el nivel.</li>
+          <li><b>Niveles:</b> separa por coma para aplicar solo en niveles concretos, ej. <code>2,4,6</code>. Vacío = todos.</li>
+          <li><b>Toggle:</b> desactiva la recompensa sin eliminarla, no aparece en el YAML.</li>
+          <li><b>Añadir Recompensa:</b> puedes apilar múltiples comandos por nivel, ej. dinero + items + permisos.</li>
+        </ul>
+      </div>
+      <div id="rewardsContainer"></div>
+      <button class="add-btn" onclick="addReward()">
+        <span class="add-icon">+</span> Añadir Recompensa
+      </button>
+    </div>
+  </div>
+
+  <!-- VIEW: LUCKPERMS -->
+  <div class="view" id="view-luckperms">
+    <div class="panel-header">
+      <div class="panel-title">🔑 LuckPerms</div>
+      <div class="panel-badge">LP</div>
+    </div>
+    <div class="panel-content">
+      <div class="help-box">
+        <div class="help-box-title">💡 Cómo usar LuckPerms</div>
+        <ul>
+          <li><b>Permiso de Nivel:</b> se otorga automáticamente al reclamar, formado como <code>permiso.{lv}</code>, ej. <code>recompensa.reclamada.3</code>.</li>
+          <li><b>Comando LP:</b> ejecutado en consola para asignar el permiso. Usa <code>{perm}</code> y <code>{lv}</code> como variables.</li>
+          <li>El panel verifica con <code>HASPERM</code> si el jugador tiene el permiso para mostrar el estado <b>Completado</b>.</li>
+          <li>Sin LuckPerms configurado el sistema no podrá marcar niveles como completados.</li>
+        </ul>
+      </div>
+      <div class="field-group">
+        <label>Permiso de Nivel (.{lv})</label>
+        <input type="text" id="permBase" value="recompensa.reclamada" oninput="debouncedGen()">
+      </div>
+      <div class="field-group">
+        <label>Comando LP</label>
+        <input type="text" id="lpCmd" value="lp user %cp-player-name% permission set {perm}.{lv} true" oninput="debouncedGen()">
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: LAYOUT -->
+  <div class="view" id="view-layout">
+    <div class="panel-header">
+      <div class="panel-title">🗺️ Layout</div>
+      <div class="panel-badge">INV</div>
+    </div>
+    <div class="panel-content">
+      <div class="help-box">
+        <div class="help-box-title">💡 Cómo usar el Layout</div>
+        <ul>
+          <li><b>Patrón:</b> distribución de los slots de recompensa dentro del inventario.</li>
+          <li><b>Filas (rows):</b> tamaño vertical del menú, de 1 a 6. Si los slots no caben aparece una advertencia.</li>
+          <li><b>Nivel Inicial:</b> primer nivel generado, útil para dividir en varios archivos YAML.</li>
+          <li><b>Cant. Slots:</b> cuántos niveles generar. Cada slot verde en la previsualización = un nivel.</li>
+          <li><b>Items Extra:</b> slots decorativos o funcionales adicionales con material, nombre, lore y comandos propios.</li>
+          <li>Slots vacíos se rellenan con el <b>Fondo</b> configurado en Ajustes del Panel.</li>
+        </ul>
+      </div>
+      <div class="field-row fr-3">
+        <div class="field-group">
+          <label>Patrón</label>
+          <select id="patternSelect" onchange="gen()">
+            <option value="centrales">Slots Centrales</option>
+            <option value="custom_path">Ruta Especial (21)</option>
+            <option value="snake">Serpiente</option>
+            <option value="zigzag">Zig-Zag</option>
+            <option value="borders">Bordes</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Nivel Inicial</label>
+          <input type="number" id="startLv" value="1" oninput="debouncedGen()">
+        </div>
+        <div class="field-group">
+          <label>Cant. Slots</label>
+          <input type="number" id="batch" value="21" oninput="debouncedGen()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Filas del menú (rows)</label>
+        <div class="rows-selector" id="rowsSelector">
+          <button class="row-btn" data-rows="1" onclick="setRows(1)">1</button>
+          <button class="row-btn" data-rows="2" onclick="setRows(2)">2</button>
+          <button class="row-btn" data-rows="3" onclick="setRows(3)">3</button>
+          <button class="row-btn" data-rows="4" onclick="setRows(4)">4</button>
+          <button class="row-btn active" data-rows="5" onclick="setRows(5)">5</button>
+          <button class="row-btn" data-rows="6" onclick="setRows(6)">6</button>
+        </div>
+        <div class="rows-warning" id="rowsWarning" style="display:none"></div>
+      </div>
+      <div class="inv-wrap">
+        <div class="inv-grid" id="invPreview"></div>
+        <div style="display:flex; gap:12px; font-size:10px; color:var(--muted);">
+          <span>🟩 = slot activo</span>
+          <span id="inv-info">21 slots</span>
+        </div>
+      </div>
+      <div class="sdiv" style="margin-top:4px;">Items Extra</div>
+      <div id="extraItemsContainer"></div>
+      <button class="add-btn" onclick="addExtraItem()">
+        <span class="add-icon">+</span> Añadir Item Extra
+      </button>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-label">Slots</div><div class="stat-val" id="stat-slots">21</div></div>
+      <div class="stat-item"><div class="stat-label">Desde</div><div class="stat-val" id="stat-start">1</div></div>
+      <div class="stat-item"><div class="stat-label">Hasta</div><div class="stat-val" id="stat-end">21</div></div>
+    </div>
+  </div>
+
+</div><!-- /panel-area -->
+</div><!-- /main-top -->
+
+<!-- CODE VIEW -->
+<div class="code-view">
+  <!-- YAML PANEL collapsible at bottom -->
+  <div class="preview-panel" id="previewPanel">
+    <div class="preview-bar" onclick="togglePreview()">
+      <div class="preview-bar-left">
+        <span class="preview-pulse"></span>
+        <div class="code-filename">
+          <span style="display:flex; gap:5px;">
+            <div class="code-dot" style="background:#ff5f57"></div>
+            <div class="code-dot" style="background:#febc2e"></div>
+            <div class="code-dot" style="background:#28c840"></div>
+          </span>
+          <span>panels.yml</span>
+          <span style="color:var(--muted)">·</span>
+          <span id="stat-lines">0 líneas</span>
+        </div>
+      </div>
+      <div class="preview-bar-right">
+        <button class="copy-btn" id="copyBtn" onclick="event.stopPropagation(); copyText()">COPIAR YAML</button>
+        <button class="preview-toggle-btn" id="previewToggleBtn">
+          <span id="previewChevron">▼</span>
+          <span id="previewToggleLabel">Mostrar</span>
+        </button>
+      </div>
+    </div>
+    <div class="preview-body" id="previewBody">
+      <pre id="output"></pre>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">© Desarrollado por <span>MineHostil</span></footer>
+
+<script>
+  // Debounce para evitar lag en inputs
+  let _genTimer = null;
+  function debouncedGen() {
+    clearTimeout(_genTimer);
+    _genTimer = setTimeout(gen, 180);
+  }
+
+  function getPatterns(rows) {
+    const cols = 9;
+    const total = rows * cols;
+
+    // centrales: inner slots skipping first/last col and first/last row
+    const centrales = [];
+    for(let r = 1; r < rows-1; r++)
+      for(let c = 1; c < cols-1; c++)
+        centrales.push(r * cols + c);
+
+    // snake: row by row alternating direction, inner rows only
+    const snake = [];
+    for(let r = 1; r < rows-1; r++) {
+      const rowSlots = [];
+      for(let c = 1; c < cols-1; c++) rowSlots.push(r * cols + c);
+      snake.push(...(r % 2 === 1 ? rowSlots : rowSlots.reverse()));
+    }
+
+    // zigzag: diagonal-like skipping pattern across inner rows
+    const zigzag = [];
+    const innerCols = [1,3,5,7];
+    for(let r = 1; r < rows-1; r++)
+      for(const c of (r % 2 === 1 ? innerCols : innerCols.slice().reverse()))
+        zigzag.push(r * cols + c);
+
+    // borders: top row + right col + bottom row (rev) + left col (rev), skip corners
+    const borders = [];
+    // top row (no corners)
+    for(let c = 1; c < cols-1; c++) borders.push(c);
+    // right col (no corners)
+    for(let r = 1; r < rows-1; r++) borders.push(r * cols + cols - 1);
+    // bottom row reversed (no corners)
+    for(let c = cols-2; c >= 1; c--) borders.push((rows-1) * cols + c);
+    // left col reversed (no corners)
+    for(let r = rows-2; r >= 1; r--) borders.push(r * cols);
+
+    // custom_path: series of inverted-U shapes matching original 21-slot pattern
+    // Verified to exactly match [9,10,19,28,37,38,39,30,21,12,13,14,23,32,41,42,43,34,25,16,17] for rows=6
+    const custom_path = [];
+    const cpSeen = new Set();
+    const cpAdd2 = (slot) => { if(!cpSeen.has(slot) && slot>=0 && slot<rows*cols){ cpSeen.add(slot); custom_path.push(slot); }};
+    const cpTop = 1;
+    const cpBot = rows - 2;
+    let cpCol = 0;
+    cpAdd2(cpTop * cols + cpCol);
+    cpCol = 1;
+    while(cpCol < cols - 1) {
+      for(let r = cpTop; r <= cpBot; r++) cpAdd2(r * cols + cpCol);
+      if(cpCol + 1 < cols - 1) {
+        const cpNext = cpCol + 2;
+        for(let c = cpCol+1; c <= cpNext; c++) cpAdd2(cpBot * cols + c);
+        for(let r = cpBot-1; r >= cpTop; r--) cpAdd2(r * cols + cpNext);
+        if(cpNext + 1 < cols - 1) {
+          cpAdd2(cpTop * cols + cpNext + 1);
+          cpCol = cpNext + 2;
+        } else if(cpNext + 1 === cols - 1) {
+          cpAdd2(cpTop * cols + cpNext + 1);
+          cpCol = cols;
+        } else { cpCol = cols; }
+      } else { cpCol = cols; }
+    }
+
+    return { centrales, custom_path, snake, zigzag, borders };
+  }
+
+  let persistentData = { rewards: {}, reqs: {} };
+
+  function switchView(id, btn) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('view-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function saveAllData() { /* data lives in reqList / rewList directly */ }
+
+  let reqList = [
+    { t:'Dinero', p:'%vault_eco_balance%', b:1000, a:500, col:'&a', l:'' }
+  ];
+
+  function renderReqs() {
+    const area = document.getElementById('reqsContainer');
+    area.innerHTML = '';
+    reqList.forEach((s, idx) => {
+      const r = idx + 1;
+      const div = document.createElement('div');
+      div.className = 'req-row';
+      div.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Requisito #${r}</div>
+          ${reqList.length > 1 ? `<button class="row-remove-btn" onclick="removeReq(${idx})" title="Eliminar">✕</button>` : ''}
+        </div>
+        <div class="req-row-top">
+          <div class="field-group"><label>Título</label><input type="text" id="req${r}T" value="${s.t}" oninput="syncReq(${idx},'t',this.value)"></div>
+          <div class="field-group"><label>Variable PlaceholderAPI</label><input type="text" id="req${r}P" value="${s.p}" oninput="syncReq(${idx},'p',this.value)"></div>
+        </div>
+        <div class="req-row-bot">
+          <div class="field-group"><label>Base</label><input type="number" id="req${r}B" value="${s.b}" oninput="syncReq(${idx},'b',this.value)"></div>
+          <div class="field-group"><label>Aumento/Lv</label><input type="number" id="req${r}A" value="${s.a}" oninput="syncReq(${idx},'a',this.value)"></div>
+          <div class="field-group"><label>Color</label><input type="text" id="req${r}Color" value="${s.col}" oninput="syncReq(${idx},'col',this.value)"></div>
+          <div class="field-group"><label>Niveles</label><input type="text" id="req${r}L" value="${s.l}" placeholder="Todos" oninput="syncReq(${idx},'l',this.value)"></div>
+        </div>`;
+      area.appendChild(div);
+    });
+  }
+
+  function syncReq(idx, key, val) { reqList[idx][key] = val; gen(); }
+  function addReq() { reqList.push({ t:'', p:'', b:0, a:0, col:'&a', l:'' }); renderReqs(); gen(); }
+  function removeReq(idx) { reqList.splice(idx, 1); renderReqs(); gen(); }
+
+  function initReqs() { renderReqs(); }
+
+  let rewList = [
+    { lvs:'', l:'Dinero', c:'eco give %cp-player-name% {val}', b:100, m:'mult', col:'#5DFA30', on:true },
+    { lvs:'', l:'', c:'', b:0, m:'mult', col:'#5DFA30', on:false }
+  ];
+
+  function renderRewards() {
+    const container = document.getElementById('rewardsContainer');
+    container.innerHTML = '';
+    let activeCount = 0;
+    rewList.forEach((s, idx) => {
+      const i = idx + 1;
+      if(s.on) activeCount++;
+      const div = document.createElement('div');
+      div.className = `reward-row ${s.on ? 'enabled' : 'disabled'}`;
+      div.innerHTML = `
+        <div class="rew-head">
+          <div class="rew-num">Recompensa #${i}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${rewList.length > 1 ? `<button class="row-remove-btn" onclick="removeReward(${idx})" title="Eliminar">✕</button>` : ''}
+            <label class="toggle" title="${s.on?'Desactivar':'Activar'}">
+              <input type="checkbox" ${s.on?'checked':''} onchange="toggleRew(${idx})">
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+        <div class="rew-body">
+          <div class="field-group"><label>Nombre</label><input type="text" id="r${i}L" value="${s.l}" oninput="syncRew(${idx},'l',this.value)"></div>
+          <div class="field-group"><label>Niveles</label><input type="text" id="r${i}Lvs" value="${s.lvs}" placeholder="Todos" oninput="syncRew(${idx},'lvs',this.value)"></div>
+        </div>
+        <div class="field-group"><label>Comando</label><input type="text" id="r${i}C" value="${s.c}" oninput="syncRew(${idx},'c',this.value)"></div>
+        <div class="rew-foot">
+          <div class="field-group"><label>Cantidad</label><input type="number" id="r${i}B" value="${s.b}" oninput="syncRew(${idx},'b',this.value)"></div>
+          <div class="field-group"><label>Modo</label>
+            <select id="r${i}M" onchange="syncRew(${idx},'m',this.value)">
+              <option value="mult" ${s.m==='mult'?'selected':''}>Multiplicar x Lv</option>
+              <option value="sum" ${s.m==='sum'?'selected':''}>Fijo</option>
+            </select>
+          </div>
+          <div class="field-group"><label>Color</label><input type="text" id="r${i}Color" value="${s.col}" oninput="syncRew(${idx},'col',this.value)"></div>
+        </div>`;
+      container.appendChild(div);
+    });
+    document.getElementById('rew-badge').textContent = activeCount + ' ACTIVAS';
+  }
+
+  function syncRew(idx, key, val) { rewList[idx][key] = val; gen(); }
+  function toggleRew(idx) { rewList[idx].on = !rewList[idx].on; renderRewards(); gen(); }
+  function addReward() { rewList.push({ lvs:'', l:'', c:'', b:0, m:'mult', col:'#5DFA30', on:true }); renderRewards(); gen(); }
+  function removeReward(idx) { rewList.splice(idx,1); renderRewards(); gen(); }
+
+  function initRewards() { renderRewards(); }
+
+  function checkLv(input, lv) {
+    if(!input || input.trim()==="") return true;
+    return input.split(',').map(n=>parseInt(n.trim())).includes(lv);
+  }
+
+  function gen() {
+    const patternKey = document.getElementById('patternSelect').value;
+    const patterns = getPatterns(menuRows);
+    const slots = patterns[patternKey] || [];
+    const startLv = parseInt(document.getElementById('startLv').value) || 1;
+    let batchInput = Math.min(parseInt(document.getElementById('batch').value)||1, slots.length);
+    // rows warning
+    const rWarn = document.getElementById('rowsWarning');
+    if(rWarn) {
+      if(batchInput > menuRows * 9) {
+        rWarn.style.display = 'block';
+        rWarn.textContent = `⚠ ${batchInput} slots no caben en ${menuRows} filas (máx ${menuRows*9}). Reduce Cant. Slots o aumenta las filas.`;
+      } else { rWarn.style.display = 'none'; }
+    }
+    const slotsUsed = slots.slice(0, batchInput);
+
+    // Update inv grid - adapt to menuRows
+    const grid = document.getElementById('invPreview');
+    grid.innerHTML = '';
+    const totalSlots = menuRows * 9;
+    for(let i=0; i<totalSlots; i++) {
+      const d = document.createElement('div');
+      d.className = 'inv-slot';
+      const idx = slotsUsed.indexOf(i);
+      if(idx !== -1) { d.classList.add('active'); d.innerText = (startLv + idx); }
+      // Mark extra item slots
+      const isExtra = extraItems.some(it => parseInt(it.slot) === i);
+      if(isExtra && idx === -1) { d.classList.add('extra'); d.innerText = '★'; }
+      grid.appendChild(d);
+    }
+
+    // Stats
+    const panelIDVal = document.getElementById('panelID').value;
+    const permVal = document.getElementById('openPerm').value;
+    if(document.getElementById('stat-id')) document.getElementById('stat-id').textContent = panelIDVal || '—';
+    if(document.getElementById('stat-perm')) document.getElementById('stat-perm').textContent = permVal || '—';
+    if(document.getElementById('stat-slots')) document.getElementById('stat-slots').textContent = batchInput;
+    if(document.getElementById('stat-start')) document.getElementById('stat-start').textContent = startLv;
+    if(document.getElementById('stat-end')) document.getElementById('stat-end').textContent = startLv + batchInput - 1;
+    if(document.getElementById('inv-info')) document.getElementById('inv-info').textContent = batchInput + ' slots activos';
+
+    // panelType
+    const ptRaw = (document.getElementById('panelTypeInput').value||'').trim();
+    const ptVals = ptRaw ? [ptRaw] : [];
+    // commands-on-open
+    const openOnLines = (document.getElementById('openOnCmds').value||'').split('\n').map(l=>l.trim()).filter(Boolean);
+
+    const loreLines = document.getElementById('loreMulti').value.split('\n');
+    const tRew = document.getElementById('titleRew').value;
+    const tReq = document.getElementById('titleReq').value;
+    const fullLocked = document.getElementById('btnLocked').value;
+    const fullClaim = document.getElementById('btnClaim').value;
+    const fullDone = document.getElementById('btnDone').value;
+    const mLocked = document.getElementById('matLocked').value;
+    const mClaim = document.getElementById('matClaim').value;
+    const mDone = document.getElementById('matDone').value;
+
+    let res = `panels:\n  ${panelIDVal}:\n    perm: ${permVal}\n    rows: ${menuRows}\n    title: '${document.getElementById('panelTitle').value}'\n    commands:\n`;
+    document.getElementById('openCmds').value.split(',').forEach(c => { if(c.trim()) res += `    - ${c.trim()}\n`; });
+    if(openOnLines.length > 0) {
+      res += `    commands-on-open:\n`;
+      openOnLines.forEach(l => { res += `    - ${l}\n`; });
+    }
+    if(ptVals.length > 0) {
+      res += `    panelType:\n`;
+      ptVals.forEach(v => { res += `    - ${v}\n`; });
+    }
+    res += `    empty: ${document.getElementById('emptyMat').value}\n    item:\n`;
+
+    for(let i=0; i < batchInput; i++) {
+      let lv = startLv + i, sl = slotsUsed[i], baseP = document.getElementById('permBase').value;
+      let reqs = [];
+      reqList.forEach(rq => {
+        if(rq.p && checkLv(rq.l, lv)) {
+          let goal = (parseInt(rq.b)||0) + (parseInt(rq.a)||0) * (lv - 1);
+          reqs.push({ t:rq.t, p:rq.p, goal:goal, col:rq.col });
+        }
+      });
+      let currentRewards = [];
+      rewList.forEach(rw => {
+        if(rw.on && checkLv(rw.lvs, lv)) {
+          let val = (rw.m==='mult') ? (parseInt(rw.b)*lv) : parseInt(rw.b);
+          currentRewards.push({ label:rw.l, val:val, cmd:rw.c, col:rw.col });
+        }
+      });
+
+      const showProg = document.getElementById('showProgress').checked;
+      const progColor = document.getElementById('progColor').value || '&7';
+      const progPrefix = document.getElementById('progPrefix').value || '(llevás ';
+      const progSuffix = document.getElementById('progSuffix').value || ')';
+      const progGoalColor = document.getElementById('progGoalColor').value;
+      const buildLore = (sp, status) => {
+        let l = "";
+        loreLines.forEach(line => { l += `\n${" ".repeat(sp)}- '${line.replace(/'/g, "''")}'`; });
+        // Requisitos primero
+        if(reqs.length > 0) {
+          l += `\n${" ".repeat(sp)}- ' '\n${" ".repeat(sp)}- '${tReq}'`;
+          reqs.forEach(req => {
+            if(status==='done') {
+              l += `\n${" ".repeat(sp)}- '  &7• &f${req.t}: ${req.col}${req.goal}'`;
+            } else if(showProg) {
+              const gc = progGoalColor || req.col;
+              l += `\n${" ".repeat(sp)}- '  &7• &f${req.t}: ${gc}${req.goal} ${progColor}${progPrefix}${req.p}${progSuffix}'`;
+            } else {
+              l += `\n${" ".repeat(sp)}- '  &7• &f${req.t}: &c${req.p}&7/${req.col}${req.goal}'`;
+            }
+          });
+        }
+        // Recompensas abajo
+        if(currentRewards.length > 0) {
+          l += `\n${" ".repeat(sp)}- ' '\n${" ".repeat(sp)}- '${tRew}'`;
+          currentRewards.forEach(re => { l += `\n${" ".repeat(sp)}- '  &7• &f${re.label}: ${re.col}${re.val}'`; });
+        }
+        let footer = (status==='done') ? fullDone : (status==='unlocked' ? fullClaim : fullLocked);
+        l += `\n${" ".repeat(sp)}- ''\n${" ".repeat(sp)}- '${footer}'`;
+        return l;
+      };
+
+      let conds = "";
+      reqs.forEach((req, idx) => {
+        conds += `\n          value${idx}: '${req.p} ISGREATER'`;
+        conds += `\n          compare${idx}: '${req.goal}${idx===reqs.length-1?"":" AND"}'`;
+      });
+
+      const sndL = document.getElementById('sndLocked').value;
+      const sndLVol = document.getElementById('sndLockedVol').value;
+      const sndLPitch = document.getElementById('sndLockedPitch').value;
+      const msgL = document.getElementById('msgLocked').value;
+
+      const sndC = document.getElementById('sndClaim').value;
+      const sndCVol = document.getElementById('sndClaimVol').value;
+      const sndCPitch = document.getElementById('sndClaimPitch').value;
+      const msgC = document.getElementById('msgClaim').value.replace('{lv}',lv);
+
+      const sndD = document.getElementById('sndDone').value;
+      const sndDVol = document.getElementById('sndDoneVol').value;
+      const sndDPitch = document.getElementById('sndDonePitch').value;
+      const msgD = document.getElementById('msgDone').value;
+
+      let lockedCmds = '';
+      if(sndL) lockedCmds += `\n        - sound= ${sndL} ${sndLVol} ${sndLPitch}`;
+      if(msgL) lockedCmds += `\n        - msg= ${msgL}`;
+      extraCmds.locked.forEach(c => { if(c.trim()) lockedCmds += `\n        - ${c.trim()}`; });
+
+      let doneCmds = '';
+      if(sndD) doneCmds += `\n          - sound= ${sndD} ${sndDVol} ${sndDPitch}`;
+      if(msgD) doneCmds += `\n          - msg= ${msgD}`;
+      extraCmds.done.forEach(c => { if(c.trim()) doneCmds += `\n          - ${c.trim()}`; });
+
+      let claimCmds = '';
+      if(sndC) claimCmds += `\n          - sound= ${sndC} ${sndCVol} ${sndCPitch}`;
+      if(msgC) claimCmds += `\n          - msg= ${msgC}`;
+      claimCmds += `\n          - console= ${document.getElementById('lpCmd').value.replace('{perm}',baseP).replace('{lv}',lv)}`;
+      extraCmds.claim.forEach(c => { if(c.trim()) claimCmds += `\n          - ${c.trim()}`; });
+
+      res += `      '${sl}':\n        material: ${mLocked}\n        name: '&cNivel ${lv} &7[BLOQUEADO]'\n        lore:${buildLore(8,'locked')}`;
+      if(lockedCmds) res += `\n        commands:${lockedCmds}`;
+      res += `\n        has0:\n          value0: '%cp-player-name% HASPERM'\n          compare0: ${baseP}.${lv} \n          material: ${mDone}\n          name: '&aNivel ${lv} &b[COMPLETADO]'\n          lore:${buildLore(10,'done')}`;
+      if(doneCmds) res += `\n          commands:${doneCmds}`;
+      res += `\n        has1:${conds}\n          material: ${mClaim}\n          name: '&eNivel ${lv} &f[RECLAMAR]'\n          lore:${buildLore(10,'unlocked')}\n          commands:${claimCmds}\n`;
+      currentRewards.forEach(re => { res += `          - console= ${re.cmd.replace('{val}',re.val).replace('{lv}',lv)}\n`; });
+      res += `          - delay= 5 refresh\n`;
+    }
+    // Extra items
+    extraItems.forEach(it => {
+      if(it.slot === '' || it.slot === null) return;
+      res += `      '${it.slot}':\n        material: ${it.mat}\n        name: '${it.name}'\n`;
+      const loreLines = it.lore.split('\n').filter(l => l.trim());
+      if(loreLines.length > 0) {
+        res += `        lore:\n`;
+        loreLines.forEach(l => { res += `        - '${l}'\n`; });
+      }
+      const cmdLines = it.cmds.split('\n').filter(l => l.trim());
+      if(cmdLines.length > 0) {
+        res += `        commands:\n`;
+        cmdLines.forEach(l => { res += `        - ${l}\n`; });
+      }
+    });
+
+    document.getElementById('output').innerText = res;
+    const lines = res.split('\n').length;
+    document.getElementById('stat-lines').textContent = lines + ' líneas';
+  }
+
+  function togglePreview() {
+    const panel = document.getElementById("previewPanel");
+    const label = document.getElementById("previewToggleLabel");
+    const isOpen = panel.classList.toggle("open");
+    label.textContent = isOpen ? "Ocultar" : "Mostrar";
+  }
+
+  function copyText() {
+    const text = document.getElementById('output').innerText;
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = "✓ COPIADO"; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = "COPIAR YAML"; btn.classList.remove('copied'); }, 1800);
+  }
+
+
+
+  function updateCmdPreview(state) {
+    if(state === 'locked') {
+      const enS = document.getElementById('enSndLocked').checked;
+      const enM = document.getElementById('enMsgLocked').checked;
+      const enC = document.getElementById('enCmdLocked').checked;
+      const snd = document.getElementById('sndLocked').value;
+      const vol = document.getElementById('sndLockedVol').value;
+      const pit = document.getElementById('sndLockedPitch').value;
+      const msg = document.getElementById('msgLocked').value;
+      const cmd = document.getElementById('cmdLocked').value;
+      const pS = document.getElementById('prevSndLocked');
+      const pM = document.getElementById('prevMsgLocked');
+      const pC = document.getElementById('prevCmdLocked');
+      const fS = document.getElementById('fieldsSndLocked');
+      const fM = document.getElementById('fieldsMsgLocked');
+      const fC = document.getElementById('fieldsCmdLocked');
+      pS.textContent = snd ? `sound= ${snd} ${vol} ${pit}` : '— sin sonido —';
+      pS.className = 'cmd-preview' + (enS ? '' : ' off');
+      fS.className = 'cmd-fields' + (enS ? '' : ' off');
+      pM.textContent = msg ? `msg= ${msg}` : '— sin mensaje —';
+      pM.className = 'cmd-preview' + (enM ? '' : ' off');
+      fM.className = 'cmd-fields' + (enM ? '' : ' off');
+      pC.textContent = cmd ? cmd : '— cmd extra —';
+      pC.className = 'cmd-preview' + (enC ? '' : ' off');
+      fC.className = 'cmd-fields' + (enC ? '' : ' off');
+    } else if(state === 'done') {
+      const enS = document.getElementById('enSndDone').checked;
+      const enM = document.getElementById('enMsgDone').checked;
+      const snd = document.getElementById('sndDone').value;
+      const vol = document.getElementById('sndDoneVol').value;
+      const pit = document.getElementById('sndDonePitch').value;
+      const msg = document.getElementById('msgDone').value;
+      const pS = document.getElementById('prevSndDone');
+      const pM = document.getElementById('prevMsgDone');
+      const fS = document.getElementById('fieldsSndDone');
+      const fM = document.getElementById('fieldsMsgDone');
+      pS.textContent = snd ? `sound= ${snd} ${vol} ${pit}` : '— sin sonido —';
+      pS.className = 'cmd-preview' + (enS ? '' : ' off');
+      fS.className = 'cmd-fields' + (enS ? '' : ' off');
+      pM.textContent = msg ? `msg= ${msg}` : '— sin mensaje —';
+      pM.className = 'cmd-preview' + (enM ? '' : ' off');
+      fM.className = 'cmd-fields' + (enM ? '' : ' off');
+    }
+  }
+
+
+  const extraCmds = { locked: [], claim: [], done: [] };
+
+  function addExtraCmd(state) {
+    const key = state;
+    extraCmds[key].push('');
+    renderExtraCmds(state);
+    debouncedGen();
+  }
+
+  function removeExtraCmd(state, idx) {
+    extraCmds[state].splice(idx, 1);
+    renderExtraCmds(state);
+    gen();
+  }
+
+  function renderExtraCmds(state) {
+    const cap = state.charAt(0).toUpperCase() + state.slice(1);
+    const container = document.getElementById('extraCmds' + cap);
+    container.innerHTML = '';
+    extraCmds[state].forEach((val, idx) => {
+      const row = document.createElement('div');
+      row.className = 'state-extra-row';
+      row.innerHTML = `
+        <input type="text" value="${val}" placeholder="ej: console= eco give %cp-player-name% 100"
+          oninput="extraCmds['${state}'][${idx}]=this.value; debouncedGen()">
+        <button class="state-extra-remove" onclick="removeExtraCmd('${state}',${idx})" title="Eliminar">✕</button>`;
+      container.appendChild(row);
+    });
+  }
+
+
+  let menuRows = 5;
+  let extraItems = [];
+
+  function setRows(n) {
+    menuRows = n;
+    document.querySelectorAll('.row-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.rows) === n);
+    });
+    // Check if slots fit
+    const batch = parseInt(document.getElementById('batch').value) || 1;
+    const maxSlots = n * 9;
+    const warn = document.getElementById('rowsWarning');
+    if(batch > maxSlots) {
+      warn.style.display = 'block';
+      warn.textContent = `⚠ ${batch} slots no caben en ${n} filas (máx ${maxSlots}). Reduce Cant. Slots o aumenta las filas.`;
+    } else {
+      warn.style.display = 'none';
+    }
+    gen();
+  }
+
+  function addExtraItem() {
+    extraItems.push({ slot: '', mat: 'GRAY_STAINED_GLASS_PANE', name: '&7Item Extra', lore: '', cmds: '' });
+    renderExtraItems();
+    debouncedGen();
+  }
+
+  function removeExtraItem(idx) {
+    extraItems.splice(idx, 1);
+    renderExtraItems();
+    gen();
+  }
+
+  function syncExtraItem(idx, key, val) {
+    extraItems[idx][key] = val;
+    debouncedGen();
+  }
+
+  function renderExtraItems() {
+    const c = document.getElementById('extraItemsContainer');
+    c.innerHTML = '';
+    extraItems.forEach((it, idx) => {
+      const d = document.createElement('div');
+      d.className = 'extra-item-card';
+      d.innerHTML = `
+        <div class="extra-item-head">
+          <span class="extra-item-num">Item Extra #${idx+1}</span>
+          <button class="row-remove-btn" onclick="removeExtraItem(${idx})">✕</button>
+        </div>
+        <div class="field-row fr-2">
+          <div class="field-group"><label>Slot (0-53)</label><input type="number" value="${it.slot}" min="0" max="53" oninput="syncExtraItem(${idx},'slot',this.value)"></div>
+          <div class="field-group"><label>Material</label><input type="text" value="${it.mat}" oninput="syncExtraItem(${idx},'mat',this.value)"></div>
+        </div>
+        <div class="field-group"><label>Nombre</label><input type="text" value="${it.name}" oninput="syncExtraItem(${idx},'name',this.value)"></div>
+        <div class="field-group"><label>Lore (una línea por renglón)</label><textarea oninput="syncExtraItem(${idx},'lore',this.value)" style="height:60px">${it.lore}</textarea></div>
+        <div class="field-group"><label>Comandos (uno por línea)</label><textarea oninput="syncExtraItem(${idx},'cmds',this.value)" style="height:50px">${it.cmds}</textarea></div>`;
+      c.appendChild(d);
+    });
+  }
+
+
+  function toggleProgressFields() {
+    const on = document.getElementById('showProgress').checked;
+    document.getElementById('progressFields').style.display = on ? 'flex' : 'none';
+    if(on) updateProgressPreview();
+  }
+
+  function updateProgressPreview() {
+    const color = document.getElementById('progColor').value || '&7';
+    const prefix = document.getElementById('progPrefix').value || '(llevás ';
+    const suffix = document.getElementById('progSuffix').value || ')';
+    const goalColor = document.getElementById('progGoalColor').value || '&a';
+    const ex = `&7• &fDinero: ${goalColor}1000 ${color}${prefix}%vault_eco_balance%${suffix}`;
+    const el = document.getElementById('progressPreview');
+    const el2 = document.getElementById('progressPreviewFull');
+    if(el) el.textContent = ex;
+    if(el2) el2.textContent = ex;
+  }
+
+  function togglePtDropdown() {
+    const dd = document.getElementById('ptDropdown');
+    const btn = document.getElementById('ptToggleBtn');
+    const isOpen = dd.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+  }
+
+  function selectPtOption(val) {
+    document.getElementById('panelTypeInput').value = val;
+    // Mark selected
+    document.querySelectorAll('.pt-option').forEach(o => {
+      o.classList.toggle('selected', o.querySelector('.pt-opt-name').textContent === val);
+    });
+    // Close dropdown
+    document.getElementById('ptDropdown').classList.remove('open');
+    document.getElementById('ptToggleBtn').classList.remove('open');
+    gen();
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if(!e.target.closest('.pt-wrap')) {
+      document.getElementById('ptDropdown')?.classList.remove('open');
+      document.getElementById('ptToggleBtn')?.classList.remove('open');
+    }
+  });
+
+  initReqs(); initRewards(); gen();
+</script>
+</body>
+</html>
